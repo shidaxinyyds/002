@@ -402,7 +402,13 @@ class OverlayService : Service() {
                 MotionEvent.ACTION_MOVE -> {
                     params.x = initialX + (event.rawX - initialTouchX).toInt()
                     params.y = initialY + (event.rawY - initialTouchY).toInt()
-                    windowManager.updateViewLayout(view, params)
+                    if (::floatView.isInitialized && isViewAdded) {
+                        try {
+                            windowManager.updateViewLayout(floatView, params)
+                        } catch (e: Exception) {
+                            // ignore
+                        }
+                    }
                     true
                 }
                 else -> false

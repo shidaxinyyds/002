@@ -164,8 +164,109 @@ class MainActivity : AppCompatActivity() {
         statusCard.addView(tvRomTips)
         container.addView(statusCard)
 
+        // 内置实机算法验证卡片 (无需任何系统权限，直接在应用内见证实测效果)
+        val liveDemoCard = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(32, 24, 32, 24)
+            background = GradientDrawable().apply {
+                setColor(Color.parseColor("#132338"))
+                cornerRadius = 20f
+                setStroke(1, Color.parseColor("#0284C7"))
+            }
+            val lp = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+                setMargins(0, 20, 0, 0)
+            }
+            layoutParams = lp
+        }
+
+        val tvDemoTitle = TextView(this).apply {
+            text = "【🀄 内置实时算法验证】(免权限直接见证)"
+            setTextColor(Color.parseColor("#38BDF8"))
+            textSize = 14f
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+            setPadding(0, 0, 0, 8)
+        }
+        liveDemoCard.addView(tvDemoTitle)
+
+        var demoDingque = "条"
+        val demoHands = listOf(
+            listOf(1, 1, 3, 6, 6, 7, 10, 11, 11, 12, 13, 14, 14),
+            listOf(9, 24, 6, 1, 4, 4, 4, 6, 4, 4, 4),
+            listOf(0, 0, 1, 2, 3, 4, 5, 6, 6, 18, 19, 20, 9)
+        )
+        var demoIndex = 0
+
+        val tvDemoHandText = TextView(this).apply {
+            setTextColor(Color.parseColor("#CBD5E1"))
+            textSize = 12f
+            setLineSpacing(4f, 1f)
+            setPadding(0, 0, 0, 8)
+        }
+        liveDemoCard.addView(tvDemoHandText)
+
+        val tvDemoResultText = TextView(this).apply {
+            setTextColor(Color.parseColor("#FCD34D"))
+            textSize = 13f
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+            setLineSpacing(6f, 1f)
+            setPadding(0, 0, 0, 12)
+        }
+        liveDemoCard.addView(tvDemoResultText)
+
+        fun updateDemoView() {
+            val hand = demoHands[demoIndex % demoHands.size]
+            val handStr = hand.joinToString(" ") { com.antigravity.mahjong.solver.SichuanSolver.tileToStr(it) }
+            tvDemoHandText.text = "实战手牌: $handStr\n当前定缺: 【$demoDingque】"
+            val res = com.antigravity.mahjong.solver.SichuanSolver.analyzeHand(hand, demoDingque)
+            tvDemoResultText.text = "🎯 AI 推荐出牌: 打【${res.recommendedDiscardName}】\n💡 决策依据: ${res.message}"
+        }
+        updateDemoView()
+
+        val demoBtnRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+        }
+
+        val btnToggleQue = Button(this).apply {
+            text = "切换定缺门"
+            textSize = 12f
+            setTextColor(Color.WHITE)
+            setBackgroundColor(Color.parseColor("#0F766E"))
+            val lp = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                setMargins(0, 0, 8, 0)
+            }
+            layoutParams = lp
+            setOnClickListener {
+                demoDingque = when (demoDingque) {
+                    "条" -> "筒"
+                    "筒" -> "万"
+                    else -> "条"
+                }
+                updateDemoView()
+            }
+        }
+        demoBtnRow.addView(btnToggleQue)
+
+        val btnNextHand = Button(this).apply {
+            text = "换一组对局"
+            textSize = 12f
+            setTextColor(Color.WHITE)
+            setBackgroundColor(Color.parseColor("#1E293B"))
+            val lp = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                setMargins(8, 0, 0, 0)
+            }
+            layoutParams = lp
+            setOnClickListener {
+                demoIndex++
+                updateDemoView()
+            }
+        }
+        demoBtnRow.addView(btnNextHand)
+        liveDemoCard.addView(demoBtnRow)
+
+        container.addView(liveDemoCard)
+
         // 间距
-        val dividerSpace = LinearLayout(this).apply { setPadding(0, 28, 0, 0) }
+        val dividerSpace = LinearLayout(this).apply { setPadding(0, 24, 0, 0) }
         container.addView(dividerSpace)
 
         // 按钮 1: 🚀 一键启动完整分析 (浮窗 + 抓屏)
@@ -316,12 +417,18 @@ class MainActivity : AppCompatActivity() {
 
     private fun showOverlayPermissionDialog() {
         androidx.appcompat.app.AlertDialog.Builder(this)
-            .setTitle("⚠️ 需要开启【悬浮窗】权限")
-            .setMessage("麻将智囊助手需要将【推荐打牌】和【9x3记牌器】悬浮在游戏上方展示。\n\n点击【立即去开启】将跳转至系统设置：\n1. 请找到并勾选【允许在其他应用上层显示】；\n2. （小米/华为/OPPO/vivo 手机）：请在权限中额外允许【后台弹出界面】。\n\n开启后直接返回本应用即可看到悬浮窗！")
+            .setTitle("⚠️ 悬浮窗权限开启指导")
+            .setMessage("麻将助手的【实时出牌建议】和【9x3记牌器】需要悬浮在游戏上方展示。\n\n" +
+                    "📌 开启步骤：\n" +
+                    "1. 点击【去开启】，在设置中开启【允许在其他应用上层显示】；\n\n" +
+                    "💡 特别注意 (Android 13/14 或 小米/华为/OPPO/vivo)：\n" +
+                    "• 若开关显示为【灰色不可点击】(提示受限制的设置)：\n" +
+                    "  请点击下方【打开应用详情】，点击页面右上角三点【⋮】，选择【允许受限制的设置】，然后即可开启！\n" +
+                    "• 小米/HyperOS 手机还需在权限设置中开启【后台弹出界面】和【显示悬浮窗】。")
             .setPositiveButton("🚀 立即去开启") { _, _ ->
                 requestOverlayPermission()
             }
-            .setNeutralButton("📱 打开应用详情") { _, _ ->
+            .setNeutralButton("📱 应用详情(解除限制)", ) { _, _ ->
                 openAppDetailsSettings()
             }
             .setNegativeButton("取消", null)
@@ -330,6 +437,18 @@ class MainActivity : AppCompatActivity() {
 
     private fun requestOverlayPermission() {
         Toast.makeText(this, "正在打开系统设置，请允许【在其他应用上层显示】", Toast.LENGTH_LONG).show()
+        // 尝试小米 MIUI / HyperOS 专用权限编辑器
+        try {
+            val miuiIntent = Intent("miui.intent.action.APP_PERM_EDITOR").apply {
+                setClassName("com.miui.securitycenter", "com.miui.permcenter.permissions.PermissionsEditorActivity")
+                putExtra("extra_pkgname", packageName)
+            }
+            startActivity(miuiIntent)
+            return
+        } catch (e: Exception) {
+            // not MIUI or intent failed, continue
+        }
+
         try {
             val intent = Intent(
                 Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
