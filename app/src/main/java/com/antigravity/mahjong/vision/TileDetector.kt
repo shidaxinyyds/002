@@ -283,18 +283,14 @@ object TileDetector {
     private fun locateTileBoundaries(handBitmap: Bitmap): List<Pair<Int, Int>> {
         val w = handBitmap.width
         val h = handBitmap.height
-
-        // 采用腾讯麻将高宽比先验 1.65
         val estTileW = (h / 1.65f)
 
-        // 查找起止白边
+        // 查找各列白色麻将像素投影
         val midYStart = (h * 0.30f).toInt()
         val midYEnd = (h * 0.70f).toInt()
         val sampleH = midYEnd - midYStart
 
-        var startX = -1
-        var endX = -1
-
+        val isColWhite = BooleanArray(w)
         for (x in 0 until w) {
             var whiteCount = 0
             for (y in midYStart until midYEnd) {
@@ -302,26 +298,58 @@ object TileDetector {
                 val lum = (Color.red(p) * 0.299f + Color.green(p) * 0.587f + Color.blue(p) * 0.114f)
                 if (lum > 130) whiteCount++
             }
-            if (whiteCount > sampleH * 0.45f) {
-                if (startX == -1) startX = x
-                endX = x
+            isColWhite[x] = (whiteCount > sampleH * 0.40f)
+        }
+
+        // 提取连续的白色连通块
+        val blocks = mutableListOf<Pair<Int, Int>>()
+        var blockStart = -1
+        for (x in 0 until w) {
+            if (isColWhite[x]) {
+                if (blockStart == -1) blockStart = x
+            } else {
+                if (blockStart != -1) {
+                    if ((x - blockStart) > estTileW * 0.35f) {
+                        blocks.add(Pair(blockStart, x))
+                    }
+                    blockStart = -1
+                }
+            }
+        }
+        if (blockStart != -1 && (w - blockStart) > estTileW * 0.35f) {
+            blocks.add(Pair(blockStart, w))
+        }
+
+        if (blocks.isEmpty()) return emptyList()
+
+        // 连通块间距较小 (< 0.25 * estTileW) 则平滑闭合
+        val mergedBlocks = mutableListOf<Pair<Int, Int>>()
+        var curr = blocks[0]
+        for (i in 1 until blocks.size) {
+            val next = blocks[i]
+            val gap = next.first - curr.second
+            if (gap < estTileW * 0.25f) {
+                curr = Pair(curr.first, next.second)
+            } else {
+                mergedBlocks.add(curr)
+                curr = next
+            }
+        }
+        mergedBlocks.add(curr)
+
+        // 细分各连通块为单张麻将选框 (独立保留摸牌间隙)
+        val boxes = mutableListOf<Pair<Int, Int>>()
+        for (block in mergedBlocks) {
+            val bw = (block.second - block.first).toFloat()
+            val num = max(1, Math.round(bw / estTileW).toInt())
+            val step = bw / num
+            for (i in 0 until num) {
+                val bx1 = (block.first + i * step).toInt().coerceIn(0, w - 1)
+                val bx2 = (block.first + (i + 1) * step).toInt().coerceIn(0, w)
+                boxes.add(Pair(bx1, bx2))
             }
         }
 
-        if (startX == -1 || endX == -1 || (endX - startX) < estTileW * 0.5f) {
-            return emptyList()
-        }
-
-        val activeW = (endX - startX).toFloat()
-        val numTiles = max(1, Math.round(activeW / estTileW).toInt())
-        val step = activeW / numTiles
-
-        val boxes = mutableListOf<Pair<Int, Int>>()
-        for (i in 0 until numTiles) {
-            val bx1 = (startX + i * step).toInt().coerceIn(0, w - 1)
-            val bx2 = (startX + (i + 1) * step).toInt().coerceIn(0, w)
-            boxes.add(Pair(bx1, bx2))
-        }
         return boxes
     }
 
@@ -331,7 +359,7 @@ object TileDetector {
         val prevBox = tileBoxes[tileBoxes.size - 2]
         val normalStep = (prevBox.second - prevBox.first)
         val gap = (lastBox.first - prevBox.second)
-        return gap > normalStep * 0.35f
+        return gap > normalStep * 0.25f
     }
 
     fun rotateBitmap(source: Bitmap, angle: Float): Bitmap {

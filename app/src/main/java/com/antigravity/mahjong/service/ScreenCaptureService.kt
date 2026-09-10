@@ -72,8 +72,11 @@ class ScreenCaptureService : Service() {
                     @Suppress("DEPRECATION")
                     intent.getParcelableExtra(EXTRA_RESULT_DATA)
                 }
-                screenWidth = intent.getIntExtra(EXTRA_WIDTH, 1920)
-                screenHeight = intent.getIntExtra(EXTRA_HEIGHT, 1080)
+                val rawW = intent.getIntExtra(EXTRA_WIDTH, 1920)
+                val rawH = intent.getIntExtra(EXTRA_HEIGHT, 1080)
+                // 麻将手游全为横屏运行，VirtualDisplay 严格采用横屏标准分辨率以精准契合手牌/牌河/碰杠 ROI 比例
+                screenWidth = kotlin.math.max(rawW, rawH)
+                screenHeight = kotlin.math.min(rawW, rawH)
                 screenDensity = intent.getIntExtra(EXTRA_DENSITY, 320)
 
                 startForegroundServiceWithNotification()

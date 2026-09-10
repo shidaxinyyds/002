@@ -80,11 +80,20 @@ class OverlayService : Service() {
             }
         }
 
-        // 顶部胶囊行 (定缺徽章 + 推荐打牌 + 展开/折叠 + 设置)
+        // 顶部胶囊行 (拖动手柄 + 定缺徽章 + 推荐打牌 + 展开/折叠 + 设置 + 关闭)
         val topRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
         }
+
+        // 拖拽手柄
+        val tvDragGrip = TextView(this).apply {
+            text = "⋮⋮ "
+            setTextColor(Color.parseColor("#64748B"))
+            textSize = 16f
+            setPadding(4, 0, 8, 0)
+        }
+        topRow.addView(tvDragGrip)
 
         // 定缺快捷切换按钮
         tvDingqueBadge = TextView(this).apply {
@@ -117,7 +126,7 @@ class OverlayService : Service() {
             text = "  推荐出牌: 分析中..."
             setTextColor(Color.WHITE)
             textSize = 15f
-            setPadding(12, 0, 12, 0)
+            setPadding(10, 0, 10, 0)
         }
         topRow.addView(tvRecommendation)
 
@@ -160,7 +169,24 @@ class OverlayService : Service() {
             }
         }
         topRow.addView(btnSetting)
+
+        // 关闭浮窗按钮
+        val btnClose = TextView(this).apply {
+            text = " ✕ "
+            setTextColor(Color.parseColor("#94A3B8"))
+            textSize = 14f
+            setPadding(10, 6, 6, 6)
+            setOnClickListener {
+                stopSelf()
+            }
+        }
+        topRow.addView(btnClose)
+
         floatView.addView(topRow)
+
+        // 绑定手势拖拽至手柄和推荐文本
+        setupTouchDrag(tvDragGrip, params)
+        setupTouchDrag(tvRecommendation, params)
 
         // 胶囊态简要叫口/进张展示
         tvDetails = TextView(this).apply {
@@ -174,9 +200,6 @@ class OverlayService : Service() {
         // ==================== 全展开 9x3 记牌器与决策面板 ====================
         initExpandPanel()
         floatView.addView(expandPanel)
-
-        // 支持手势自由拖动浮窗位置
-        setupTouchDrag(floatView, params)
 
         try {
             windowManager.addView(floatView, params)

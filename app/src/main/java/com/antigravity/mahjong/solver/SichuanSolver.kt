@@ -233,9 +233,15 @@ object SichuanSolver {
     }
 
     private fun canHu(hand: IntArray, numFixed: Int): Boolean {
-        val numMeldsNeeded = 4 - numFixed
         val total = hand.sum()
+        val numMeldsNeeded = 4 - numFixed
         if (total != 2 + numMeldsNeeded * 3) return false
+
+        // 四川麻将核心牌型：七对判定 (门前清 14 张手牌，支持普通七对与龙七对)
+        if (numFixed == 0 && total == 14) {
+            val pairsCount = (0..26).sumOf { hand[it] / 2 }
+            if (pairsCount == 7) return true
+        }
 
         for (pair in 0..26) {
             if (hand[pair] >= 2) {
