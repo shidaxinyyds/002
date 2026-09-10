@@ -33,20 +33,39 @@ class OverlayService : Service() {
     private var currentDingque = "条"
     private val dingqueOptions = listOf("条", "筒", "万")
 
+    private var isViewAdded = false
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
         super.onCreate()
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        showOverlayWindow()
+        return START_STICKY
+    }
+
+    private fun showOverlayWindow() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !android.provider.Settings.canDrawOverlays(this)) {
             android.util.Log.e("OverlayService", "No overlay permission granted!")
+            android.widget.Toast.makeText(this, "⚠️ 悬浮窗未显示：请先开启【在其他应用上层显示】权限！", android.widget.Toast.LENGTH_LONG).show()
             return
         }
+
+        if (isViewAdded && ::floatView.isInitialized) {
+            floatView.visibility = View.VISIBLE
+            return
+        }
+
         try {
             initOverlayViews()
             com.antigravity.mahjong.coordinator.MahjongCoordinator.registerOverlay(this)
+            android.widget.Toast.makeText(this, "🟢 麻将悬浮窗已成功唤出！", android.widget.Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
             android.util.Log.e("OverlayService", "Failed to init overlay views", e)
+            android.widget.Toast.makeText(this, "⚠️ 悬浮窗弹出失败: ${e.message}，请在系统设置中允许本应用显示悬浮窗", android.widget.Toast.LENGTH_LONG).show()
         }
     }
 
@@ -61,12 +80,12 @@ class OverlayService : Service() {
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
             layoutFlag,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
             PixelFormat.TRANSLUCENT
         ).apply {
-            gravity = Gravity.TOP or Gravity.START
-            x = 100
-            y = 50
+            gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+            x = 0
+            y = 120
         }
 
         // 胶囊外壳容器
@@ -203,6 +222,7 @@ class OverlayService : Service() {
 
         try {
             windowManager.addView(floatView, params)
+            isViewAdded = true
         } catch (e: Exception) {
             android.util.Log.e("OverlayService", "Failed to add floatView to windowManager", e)
         }
@@ -392,12 +412,13 @@ class OverlayService : Service() {
 
     override fun onDestroy() {
         com.antigravity.mahjong.coordinator.MahjongCoordinator.unregisterOverlay()
-        if (::floatView.isInitialized) {
+        if (::floatView.isInitialized && isViewAdded) {
             try {
                 windowManager.removeView(floatView)
             } catch (e: Exception) {
                 // ignore
             }
+            isViewAdded = false
         }
         super.onDestroy()
     }

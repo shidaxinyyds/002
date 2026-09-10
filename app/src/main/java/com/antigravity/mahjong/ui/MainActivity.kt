@@ -302,15 +302,34 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun checkOverlayPermissionOnly(): Boolean {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
-            requestOverlayPermission()
+        val hasOverlay = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            Settings.canDrawOverlays(this)
+        } else {
+            true
+        }
+        if (!hasOverlay) {
+            showOverlayPermissionDialog()
             return false
         }
         return true
     }
 
+    private fun showOverlayPermissionDialog() {
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("⚠️ 需要开启【悬浮窗】权限")
+            .setMessage("麻将智囊助手需要将【推荐打牌】和【9x3记牌器】悬浮在游戏上方展示。\n\n点击【立即去开启】将跳转至系统设置：\n1. 请找到并勾选【允许在其他应用上层显示】；\n2. （小米/华为/OPPO/vivo 手机）：请在权限中额外允许【后台弹出界面】。\n\n开启后直接返回本应用即可看到悬浮窗！")
+            .setPositiveButton("🚀 立即去开启") { _, _ ->
+                requestOverlayPermission()
+            }
+            .setNeutralButton("📱 打开应用详情") { _, _ ->
+                openAppDetailsSettings()
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
     private fun requestOverlayPermission() {
-        Toast.makeText(this, "请在接下来的系统设置中允许【在其他应用上层显示】", Toast.LENGTH_LONG).show()
+        Toast.makeText(this, "正在打开系统设置，请允许【在其他应用上层显示】", Toast.LENGTH_LONG).show()
         try {
             val intent = Intent(
                 Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
@@ -321,8 +340,19 @@ class MainActivity : AppCompatActivity() {
             try {
                 startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION))
             } catch (e2: Exception) {
-                Toast.makeText(this, "请在手机设置中手动授予【悬浮窗】权限", Toast.LENGTH_LONG).show()
+                openAppDetailsSettings()
             }
+        }
+    }
+
+    private fun openAppDetailsSettings() {
+        try {
+            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                data = Uri.parse("package:$packageName")
+            }
+            startActivity(intent)
+        } catch (e: Exception) {
+            Toast.makeText(this, "请前往手机【设置-应用管理】手动开启权限", Toast.LENGTH_SHORT).show()
         }
     }
 
