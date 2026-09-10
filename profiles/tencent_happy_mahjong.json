@@ -1,0 +1,51 @@
+{
+  "profile_name": "腾讯欢乐麻将_标准横屏预设",
+  "version": "3.5",
+  "game_target": "com.qq.game.happymj",
+  "description": "适配腾讯欢乐麻将红中血流/翻倍血流/血战到底",
+  "screen_aspect_ratio": "20:9",
+  "regions": {
+    "hand": {
+      "name": "玩家自身手牌区",
+      "x_ratio": 0.045,
+      "y_ratio": 0.815,
+      "w_ratio": 0.910,
+      "h_ratio": 0.175,
+      "anchor": "bottom"
+    },
+    "dingque_badge": {
+      "name": "左下角定缺徽章区",
+      "x_ratio": 0.075,
+      "y_ratio": 0.620,
+      "w_ratio": 0.040,
+      "h_ratio": 0.045,
+      "color_map": {
+        "green": "条",
+        "orange": "筒",
+        "red": "万"
+      }
+    },
+    "player_melds": {
+      "name": "玩家碰杠明牌区(手牌右侧)",
+      "x_ratio": 0.620,
+      "y_ratio": 0.820,
+      "w_ratio": 0.330,
+      "h_ratio": 0.165
+    },
+    "center_dice_table": {
+      "name": "桌面中心骰子与打牌大图区",
+      "x_ratio": 0.350,
+      "y_ratio": 0.320,
+      "w_ratio": 0.300,
+      "h_ratio": 0.320
+    }
+  },
+  "rules": {
+    "mode": "Sichuan",
+    "total_tiles": 108,
+    "has_dingque": true,
+    "allow_chi": false,
+    "allow_peng": true,
+    "allow_gang": true
+  }
+}

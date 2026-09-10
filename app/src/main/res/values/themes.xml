@@ -1,0 +1,7 @@
+<resources>
+    <style name="Theme.MahjongAgent" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">#38BDF8</item>
+        <item name="colorPrimaryVariant">#0284C7</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+    </style>
+</resources>
