@@ -214,10 +214,10 @@ object TileDetector {
         if (totalSamples < 15) return null
 
         val maxCount = max(greenCount, max(redCount, yellowOrangeCount))
-        return when (maxCount) {
-            greenCount if greenCount > totalSamples * 0.35f -> "条"
-            redCount if redCount > totalSamples * 0.35f -> "万"
-            yellowOrangeCount if yellowOrangeCount > totalSamples * 0.35f -> "筒"
+        return when {
+            greenCount == maxCount && greenCount > totalSamples * 0.35f -> "条"
+            redCount == maxCount && redCount > totalSamples * 0.35f -> "万"
+            yellowOrangeCount == maxCount && yellowOrangeCount > totalSamples * 0.35f -> "筒"
             else -> null
         }
     }
