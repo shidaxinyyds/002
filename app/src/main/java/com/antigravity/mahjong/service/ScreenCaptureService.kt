@@ -66,7 +66,12 @@ class ScreenCaptureService : Service() {
         when (intent?.action) {
             ACTION_START -> {
                 val resultCode = intent.getIntExtra(EXTRA_RESULT_CODE, 0)
-                val resultData = intent.getParcelableExtra<Intent>(EXTRA_RESULT_DATA)
+                val resultData = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    intent.getParcelableExtra(EXTRA_RESULT_DATA, Intent::class.java)
+                } else {
+                    @Suppress("DEPRECATION")
+                    intent.getParcelableExtra(EXTRA_RESULT_DATA)
+                }
                 screenWidth = intent.getIntExtra(EXTRA_WIDTH, 1920)
                 screenHeight = intent.getIntExtra(EXTRA_HEIGHT, 1080)
                 screenDensity = intent.getIntExtra(EXTRA_DENSITY, 320)
@@ -74,9 +79,13 @@ class ScreenCaptureService : Service() {
                 startForegroundServiceWithNotification()
 
                 if (resultData != null) {
-                    val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
-                    mediaProjection = projectionManager.getMediaProjection(resultCode, resultData)
-                    setupVirtualDisplay()
+                    try {
+                        val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+                        mediaProjection = projectionManager.getMediaProjection(resultCode, resultData)
+                        setupVirtualDisplay()
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to get MediaProjection", e)
+                    }
                 }
             }
             ACTION_STOP -> {
@@ -91,7 +100,7 @@ class ScreenCaptureService : Service() {
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("麻将视觉分析引擎运行中")
             .setContentText("正在低功耗监测游戏画面...")
-            .setSmallIcon(android.R.drawable.ic_menu_camera)
+            .setSmallIcon(com.antigravity.mahjong.R.mipmap.ic_launcher)
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .build()
@@ -108,19 +117,28 @@ class ScreenCaptureService : Service() {
     }
 
     private fun setupVirtualDisplay() {
-        // 双缓冲机制，绝对杜绝 OOM
-        imageReader = ImageReader.newInstance(screenWidth, screenHeight, PixelFormat.RGBA_8888, 2)
+        try {
+            // Android 14 (API 34+) 强约束：必须在 createVirtualDisplay 前注册 Callback
+            mediaProjection?.registerCallback(object : MediaProjection.Callback() {
+                override fun onStop() {
+                    super.onStop()
+                    stopCapture()
+                }
+            }, null)
 
-        virtualDisplay = mediaProjection?.createVirtualDisplay(
-            "MahjongVirtualDisplay",
-            screenWidth,
-            screenHeight,
-            screenDensity,
-            DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
-            imageReader?.surface,
-            null,
-            null
-        )
+            // 双缓冲机制，绝对杜绝 OOM
+            imageReader = ImageReader.newInstance(screenWidth, screenHeight, PixelFormat.RGBA_8888, 2)
+
+            virtualDisplay = mediaProjection?.createVirtualDisplay(
+                "MahjongVirtualDisplay",
+                screenWidth,
+                screenHeight,
+                screenDensity,
+                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+                imageReader?.surface,
+                null,
+                null
+            )
 
         imageReader?.setOnImageAvailableListener({ reader ->
             val image = reader.acquireLatestImage() ?: return@setOnImageAvailableListener
@@ -141,6 +159,9 @@ class ScreenCaptureService : Service() {
         }, null)
 
         Log.i(TAG, "VirtualDisplay initialized: ${screenWidth}x${screenHeight} density=$screenDensity")
+        } catch (e: Exception) {
+            Log.e(TAG, "VirtualDisplay setup failed", e)
+        }
     }
 
     /**

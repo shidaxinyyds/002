@@ -38,8 +38,16 @@ class OverlayService : Service() {
     override fun onCreate() {
         super.onCreate()
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
-        initOverlayViews()
-        com.antigravity.mahjong.coordinator.MahjongCoordinator.registerOverlay(this)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !android.provider.Settings.canDrawOverlays(this)) {
+            android.util.Log.e("OverlayService", "No overlay permission granted!")
+            return
+        }
+        try {
+            initOverlayViews()
+            com.antigravity.mahjong.coordinator.MahjongCoordinator.registerOverlay(this)
+        } catch (e: Exception) {
+            android.util.Log.e("OverlayService", "Failed to init overlay views", e)
+        }
     }
 
     private fun initOverlayViews() {
@@ -170,7 +178,11 @@ class OverlayService : Service() {
         // 支持手势自由拖动浮窗位置
         setupTouchDrag(floatView, params)
 
-        windowManager.addView(floatView, params)
+        try {
+            windowManager.addView(floatView, params)
+        } catch (e: Exception) {
+            android.util.Log.e("OverlayService", "Failed to add floatView to windowManager", e)
+        }
     }
 
     private lateinit var expandPanel: LinearLayout
@@ -358,7 +370,11 @@ class OverlayService : Service() {
     override fun onDestroy() {
         com.antigravity.mahjong.coordinator.MahjongCoordinator.unregisterOverlay()
         if (::floatView.isInitialized) {
-            windowManager.removeView(floatView)
+            try {
+                windowManager.removeView(floatView)
+            } catch (e: Exception) {
+                // ignore
+            }
         }
         super.onDestroy()
     }

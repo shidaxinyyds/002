@@ -155,4 +155,19 @@ object MahjongCoordinator {
             }
         }
     }
+
+    /**
+     * 一键实战模拟：立即向悬浮窗注入一套真实对局数据（用于用户功能测试与算法体验）
+     */
+    fun triggerMockSimulation() {
+        val mockTiles = listOf(0, 0, 1, 2, 3, 4, 5, 6, 6, 18, 19, 20, 9)
+        gameStateTracker.updateDingque("筒")
+        // 模拟公开牌
+        gameStateTracker.tileMemory.recordVisibleTile(9) // 牌河已见1张1筒
+        val result = gameStateTracker.onHandUpdated(mockTiles, false)
+        val remainingCounts = gameStateTracker.tileMemory.getRemainingCounts()
+        coordinatorScope.launch(Dispatchers.Main) {
+            overlayServiceRef?.get()?.updateResult(result, remainingCounts)
+        }
+    }
 }
