@@ -323,14 +323,25 @@ class OverlayService : Service() {
      * 外部更新决策结果与记牌矩阵接口
      */
     fun updateResult(result: SichuanSolver.AnalysisResult, remainingCounts: IntArray? = null) {
-        tvRecommendation.text = "  打【${result.recommendedDiscardName}】"
+        if (result.bigFanDiscardName != null) {
+            tvRecommendation.text = "速和【${result.recommendedDiscardName}】| 搏清一色【${result.bigFanDiscardName}】"
+        } else {
+            tvRecommendation.text = "  打【${result.recommendedDiscardName}】"
+        }
+
+        val radarSummary = if (result.defenseRadar.isNotEmpty()) {
+            val safe = result.defenseRadar.count { it.level == "SAFE" }
+            val danger = result.defenseRadar.count { it.level == "DANGER" }
+            " [🟢安:$safe 🔴危:$danger]"
+        } else ""
+
         if (result.bestWaits.isNotEmpty()) {
             tvDetails.visibility = View.VISIBLE
-            tvDetails.text = "听: ${result.bestWaits.joinToString()} (共${result.totalRealWins}张存活)"
-            tvFullAnalysis.text = "【听牌叫口】可胡: ${result.bestWaits.joinToString()} | 牌池真实存活: ${result.totalRealWins}张"
+            tvDetails.text = "听: ${result.bestWaits.joinToString()} (共${result.totalRealWins}张)$radarSummary"
+            tvFullAnalysis.text = "【听牌叫口】可胡: ${result.bestWaits.joinToString()} | 存活: ${result.totalRealWins}张$radarSummary"
         } else {
-            tvDetails.text = result.message
-            tvFullAnalysis.text = "【打牌建议】打出【${result.recommendedDiscardName}】: ${result.message}"
+            tvDetails.text = result.message + radarSummary
+            tvFullAnalysis.text = "【打牌建议】打出【${result.recommendedDiscardName}】: ${result.message}$radarSummary"
         }
 
         // 刷新 9x3 剩余牌矩阵仪表盘
